@@ -22,23 +22,24 @@ const getAllGames = asyncWrapper(async (req, res, next) => {
         isQuery = { limit: 4, order: [["release_date", "DESC"]] };
         break;
       }
-      default: 
-        isQuery = {}
+      default:
+        isQuery = {};
     }
   }
   const allGames = await Game.findAll({
     include: [
       {
         model: Genre,
-        as: 'genres',
-        attributes: ['id', 'name'],
+        as: "genres",
+        attributes: ["id", "name"],
         through: { attributes: [] },
         required: true,
       },
     ],
-    ...isQuery
-  })
-  if (!allGames) { // No game with id
+    ...isQuery,
+  });
+  if (!allGames) {
+    // No game with id
     return next(createCustomError(`Games could not be brought`));
   }
   res.status(201).json({ status: "success", response: allGames });
@@ -50,21 +51,22 @@ const getGame = asyncWrapper(async (req, res, next) => {
     include: [
       {
         model: Genre,
-        as: 'genres',
-        attributes: ['id', 'name'],
+        as: "genres",
+        attributes: ["id", "name"],
         through: { attributes: [] },
-        required: true
+        required: true,
       },
       {
         model: System,
-        as: 'systems',
-        attributes: ['id', 'name', 'logo'],
+        as: "systems",
+        attributes: ["id", "name", "logo"],
         through: { attributes: [] },
-        required: true
-      }
-    ]
-  })
-  if (!game) { // No game with id
+        required: true,
+      },
+    ],
+  });
+  if (!game) {
+    // No game with id
     return next(createCustomError(`No game with id: ${req.params.id}`));
   }
   res.status(201).json({ status: "success", response: game });
@@ -72,7 +74,8 @@ const getGame = asyncWrapper(async (req, res, next) => {
 
 const createGame = asyncWrapper(async (req, res, next) => {
   const game = await Game.create(req.body);
-  if (!game) { // No game with id
+  if (!game) {
+    // No game with id
     return next(createCustomError(`The game could not created`));
   }
   res.status(201).json({ status: "success", response: game });
@@ -80,7 +83,8 @@ const createGame = asyncWrapper(async (req, res, next) => {
 
 const deleteGame = async (req, res, next) => {
   const game = await Game.destroy({ where: { id: req.params.id } });
-  if (!game) { // No game with id
+  if (!game) {
+    // No game with id
     return next(createCustomError(`No game with id: ${req.params.id}`));
   }
   res.status(201).json({ status: "success", response: {} });
@@ -88,7 +92,8 @@ const deleteGame = async (req, res, next) => {
 
 const updateGame = async (req, res, next) => {
   const game = await Game.update(req.body, { where: { id: req.params.id } });
-  if (!game[0]) { // No game with id
+  if (!game[0]) {
+    // No game with id
     return next(createCustomError(`No game with id or parameter is not exist: ${req.params.id}`));
   }
   res.status(201).json({ status: "success", response: game });
@@ -99,22 +104,33 @@ const relatedGames = async (req, res, next) => {
     include: [
       {
         model: Genre,
-        as: 'genres',
-        attributes: ['id', 'name'],
+        as: "genres",
+        attributes: ["id", "name"],
         through: { attributes: [] },
         required: true,
         where: {
-          id: req.body?.genre_ids
-        }
+          id: req.body?.genre_ids,
+        },
       },
     ],
     limit: 4,
-    order: [["score", "DESC"]]
-  })
-  if (!relatedGames) { // No game with genre_ids
+    order: [["score", "DESC"]],
+  });
+  if (!relatedGames) {
+    // No game with genre_ids
     return next(createCustomError(`No game with ids: ${req.body.ids}`));
   }
   res.status(201).json({ status: "success", response: relatedGames });
-}
+};
 
-module.exports = { getAllGames, getGame, createGame, deleteGame, updateGame, relatedGames };
+const discoverGames = async (req, res, next) => {
+  const discoverGames = await Game.findAll({
+    order: [["release_date", "DESC"]],
+  });
+  if (!discoverGames) {
+    return next(createCustomError(`No game`));
+  }
+  res.status(201).json({ status: "success", response: discoverGames });
+};
+
+module.exports = { getAllGames, getGame, createGame, deleteGame, updateGame, relatedGames, discoverGames };
