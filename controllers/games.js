@@ -3,6 +3,7 @@ const Genre = require("../models/Genre");
 const System = require("../models/System");
 const asyncWrapper = require("../middleware/async");
 const { createCustomError } = require("../errors/custom-error");
+const { Op } = require("sequelize");
 
 const getAllGames = asyncWrapper(async (req, res, next) => {
   const getTypes = ["best", "free", "newest"];
@@ -124,13 +125,64 @@ const relatedGames = async (req, res, next) => {
 };
 
 const discoverGames = async (req, res, next) => {
+  const { genre_id, system_id, price } = req?.query;
   const discoverGames = await Game.findAll({
-    order: [["release_date", "DESC"]],
+    include: [
+      {
+        model: Genre,
+        as: "genres",
+        attributes: ["id"],
+        through: { attributes: [] },
+        required: true,
+        where: genre_id ? { id: genre_id } : {},
+      },
+      {
+        model: System,
+        as: "systems",
+        attributes: [],
+        through: { attributes: ["id"] },
+        required: true,
+        where: system_id ? { id: system_id } : {},
+      },
+    ],
+    where: price
+      ? {
+          price: { [Op[price === "free" ? "eq" : "ne"]]: 0 },
+        }
+      : {},
+    attributes: ["id"],
+    through: { attributes: [] },
   });
   if (!discoverGames) {
     return next(createCustomError(`No game`));
   }
-  res.status(201).json({ status: "success", response: discoverGames });
+
+  let discoverGamesDetail = [];
+
+  if (discoverGames.length !== 0) {
+    const gameIds = discoverGames.map((game) => game.id);
+    discoverGamesDetail = await Game.findAll({
+      where: { id: gameIds },
+      include: [
+        {
+          model: Genre,
+          as: "genres",
+          attributes: ["id", "name"],
+          through: { attributes: [] },
+          required: true,
+        },
+        {
+          model: System,
+          as: "systems",
+          attributes: ["id", "name", "logo"],
+          through: { attributes: [] },
+          required: true,
+        },
+      ],
+    });
+  }
+
+  res.status(201).json({ status: "success", response: discoverGamesDetail });
 };
 
 module.exports = { getAllGames, getGame, createGame, deleteGame, updateGame, relatedGames, discoverGames };
